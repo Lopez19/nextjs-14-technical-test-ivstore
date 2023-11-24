@@ -15,11 +15,15 @@ const Analytics = () => {
     const [totalSalesToday, setTotalSalesToday] = useState({})
     const [totalSalesThisMonth, setTotalSalesThisMonth] = useState({})
     const [totalSalesThisYear, setTotalSalesThisYear] = useState({})
+
     const [chartDataPie, setChartDataPie] = useState({});
     const [chartOptionsPie, setChartOptionsPie] = useState({});
+
     const [chartDataBar, setChartDataBar] = useState({});
     const [chartOptionsBar, setChartOptionsBar] = useState({});
+
     const [dateRange, setDateRange] = useState<any>(null);
+
     const [productMoreAndLessSold, setProductMoreAndLessSold] = useState([{}])
 
     useEffect(() => {
@@ -58,8 +62,7 @@ const Analytics = () => {
                 datasets: [
                     {
                         data: res.map((item: any) => item.totalSalesAmount.toFixed(2)),
-                        backgroundColor: res.map((item: any) => documentStyle.getPropertyValue(`--${item.color}-500`)),
-                        hoverBackgroundColor: res.map((item: any) => documentStyle.getPropertyValue(`--${item.color}-600`)),
+                        backgroundColor: res.map((item: any) => item.color)
                     }
                 ]
             }
@@ -169,8 +172,7 @@ const Analytics = () => {
                 datasets: [
                     {
                         data: res.salesByStore.map((item: any) => item.totalSalesAmount.toFixed(2)),
-                        backgroundColor: res.salesByStore.map((item: any) => documentStyle.getPropertyValue(`--${item.color}-500`)),
-                        hoverBackgroundColor: res.salesByStore.map((item: any) => documentStyle.getPropertyValue(`--${item.color}-600`)),
+                        backgroundColor: res.salesByStore.map((item: any) => item.color),
                     }
                 ]
             }
@@ -277,7 +279,7 @@ const Analytics = () => {
                 <div className={`mt-3`}>
                     <CardProductMoreSaleComponent
                         title={"Product Lees Sold"}
-                        content={productMoreAndLessSold[productMoreAndLessSold.length-1]?.productName}
+                        content={productMoreAndLessSold[productMoreAndLessSold.length - 1]?.productName}
                     />
                 </div>
             </div>
