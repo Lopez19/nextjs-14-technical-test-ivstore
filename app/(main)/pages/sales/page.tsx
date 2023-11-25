@@ -108,7 +108,6 @@ const Sales = () => {
     };
 
     const createdAtFilterTemplate = (options: ColumnFilterElementTemplateOptions) => {
-
         return <Calendar value={options.value}
                          onChange={(e: CalendarChangeEvent) =>
                              options.filterCallback(e.value, options.index)

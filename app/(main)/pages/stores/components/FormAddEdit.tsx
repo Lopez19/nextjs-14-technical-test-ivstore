@@ -9,45 +9,149 @@ import {InputText} from 'primereact/inputtext';
 import {classNames} from 'primereact/utils';
 import React, {useEffect, useState} from 'react';
 import {Controller, useForm} from 'react-hook-form';
+import * as Yup from 'yup';
+import {yupResolver} from '@hookform/resolvers/yup';
+import {InputNumber} from 'primereact/inputnumber';
 
-const FormCreate = () => {
-    const [departments, setDepartments] = useState([{}])
-    const [cities, setCities] = useState([{}])
+interface IFormCreate {
+    setVisible: ({create: boolean, edit: boolean}) => void;
+    setNotify: ({create: boolean,edit: boolean}) => void;
+    dataUpdate?: IVStore.Store;
+}
 
-    useEffect(() => {
-        StoreService.getAllDepartments().then((res) => {
-            setDepartments(res)
-        })
-    }, []);
+const FormAddEdit = ({dataUpdate, setVisible, setNotify}: IFormCreate) => {
 
+    const [departments, setDepartments] = useState([{}]);
+    const [cities, setCities] = useState([{}]);
+    const id = dataUpdate?.id;
+    const isAddMode = !id;
+
+    // Form validation rules
+    const validateSchema = Yup.object().shape({
+        id: Yup.number(),
+        name: Yup.string().required('Name is required'),
+        department: Yup.object().required('Department is required'),
+        city: Yup.object().required('City is required'),
+        street: Yup.string().required('Street is required'),
+        phone: Yup.string().required('Phone is required'),
+        color: Yup.string().required('Color is required'),
+    });
+
+    // Functions to build form returned by useForm() hook
     const {
         control,
         handleSubmit,
         reset,
-        formState: {errors}
-    } = useForm();
-
-    const onSubmit = handleSubmit((data) => {
-        StoreService.createStore(data).then((res) => {
-            console.log(res)
-        })
-        reset()
+        formState: {errors, isSubmitting},
+        setValue,
+        getValues,
+    } = useForm({
+        resolver: yupResolver(validateSchema)
     });
+
+    // On submit form
+    const onSubmit = handleSubmit((data) => {
+        return isAddMode
+            ? createStore(data)
+            : updateStore(data);
+    });
+
+    // Create Store
+    const createStore = (data: any) => {
+        StoreService.createStore(data).then((res) => {
+            setNotify({
+                create: true,
+                edit: false
+            })
+            setVisible({
+                create: false,
+                edit: false
+            })
+        })
+    };
+
+    // Update Store
+    const updateStore = (data: any) => {
+        StoreService.updateStore(data).then((res) => {
+            setNotify({
+                create: false,
+                edit: true
+            })
+            setVisible({
+                create: false,
+                edit: false
+            })
+        });
+    };
+
+    const [store, setStore] = useState({});
+
+    useEffect(() => {
+        StoreService.getAllDepartments().then((res) => {
+            setDepartments(res);
+        });
+
+        if (!isAddMode) {
+            StoreService.getStoreById(id).then(async (res) => {
+                const fields = ['id', 'name', 'department', 'city', 'street', 'phone', 'color'];
+                fields.forEach((field) => {
+                    if (field === 'department') {
+                        findDepartmentByName(res.address.department);
+                    } else if (field === 'city') {
+                        findCityByName(res.address.department, res.address.city);
+                    } else if (field === 'street') {
+                        setValue(field, res.address.street || '');
+                    } else {
+                        setValue(field, res[field] || '');
+                    }
+                })
+                setStore(res);
+            });
+        }
+    }, []);
+
+    const findDepartmentByName = async (name: string) => {
+        return await StoreService.getAllDepartments().then((res) => {
+            const department = res.find((department: any) => department.name === name);
+            setValue('department', department || '');
+            return department;
+        });
+    };
+
+    const findCityByName = async (nameDepartment: string, nameCity: string) => {
+        const department = await findDepartmentByName(nameDepartment);
+        await StoreService.getAllCitiesByDepartmentId(department.id).then((res) => {
+            setCities(res)
+            const city = res.find((city: any) => city.name === nameCity);
+            setValue('city', city || '');
+        });
+    };
 
     const getFormErrorMessage = (name: string) => {
         return errors[name] && <small className="p-error">{errors[name].message}</small>;
-    }
+    };
 
     return (
         <>
             <form onSubmit={onSubmit} className={"p-fluid mt-5"}>
                 <div className="fomrgrid grid mb-3">
+                    <div className="field">
+                        <Controller name={"id"}
+                                    control={control}
+                                    render={({field}) => (
+                                        <InputNumber id={"id"}
+                                                     {...field}
+                                                     type={"hidden"}
+                                        />
+                                    )}
+                        />
+                    </div>
                     <div className="field col-12">
                         <Controller name={"name"}
                                     control={control}
                                     render={({field, fieldState}) => (
                                         <span className="p-float-label">
-                                            <InputText id={"name"}
+                                            <InputText id={field.name}
                                                        {...field}
                                                        autoComplete={"off"}
                                                        autoFocus
@@ -56,7 +160,6 @@ const FormCreate = () => {
                                             <label htmlFor={"name"}>Store Name</label>
                                         </span>
                                     )}
-                                    rules={{required: 'Name is required'}}
                         />
                         {getFormErrorMessage('name')}
                     </div>
@@ -82,7 +185,6 @@ const FormCreate = () => {
                                             <label htmlFor={"department"}>Department</label>
                                         </span>
                                     )}
-                                    rules={{required: 'Department is required'}}
                         />
                         {getFormErrorMessage('department')}
                     </div>
@@ -102,7 +204,6 @@ const FormCreate = () => {
                                             <label htmlFor={"city"}>City</label>
                                         </span>
                                     )}
-                                    rules={{required: 'City is required'}}
                         />
                         {getFormErrorMessage('city')}
                     </div>
@@ -119,7 +220,6 @@ const FormCreate = () => {
                                             <label htmlFor={"street"}>Street Name</label>
                                         </span>
                                     )}
-                                    rules={{required: 'Street is required'}}
                         />
                         {getFormErrorMessage('street')}
                     </div>
@@ -138,7 +238,6 @@ const FormCreate = () => {
                                             <label htmlFor={"phone"}>Phone</label>
                                         </span>
                                     )}
-                                    rules={{required: 'Phone is required'}}
                         />
                         {getFormErrorMessage('phone')}
                     </div>
@@ -155,16 +254,20 @@ const FormCreate = () => {
                                                      })}
                                         />
                                     )}
-                                    rules={{required: 'Color is required'}}
                         />
                         {getFormErrorMessage('color')}
                     </div>
                 </div>
-                <Button label="Crear" icon={"pi pi-check"} type={"submit"}/>
+                <Button formNoValidate
+                        type={"submit"}
+                        label={isAddMode ? 'Create Store' : 'Update Store'}
+                        className={isAddMode ? 'p-button-success' : 'p-button-warning'}
+                        disabled={isSubmitting}
+                />
             </form>
         </>
     );
 
 };
 
-export default FormCreate;
+export default FormAddEdit;
